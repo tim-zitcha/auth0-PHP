@@ -3937,6 +3937,7 @@ final class Assert
 
     /**
      * Will also pass if $value is a directory, use Assert::file() instead if you need to be sure it is a file.
+     * Prevents arbitrary file read vulnerabilities by rejecting paths with protocol separators.
      *
      * @param mixed  $value
      * @param string $message
@@ -3946,6 +3947,14 @@ final class Assert
     public static function fileExists($value, $message = ''): void
     {
         self::string($value);
+
+        // Reject paths containing protocol separators to prevent arbitrary file read
+        if (str_contains((string) $value, '://')) {
+            self::reportInvalidArgument(sprintf(
+                $message ?: 'File paths with protocol separators ("://") are not allowed: %s',
+                self::valueToString($value),
+            ));
+        }
 
         if (! file_exists($value)) {
             self::reportInvalidArgument(sprintf(

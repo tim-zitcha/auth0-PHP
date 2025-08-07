@@ -10,6 +10,7 @@ use Auth0\SDK\Utility\Request\{FilteredRequest, PaginatedRequest, RequestOptions
 use Exception;
 use Http\Message\MultipartStream\MultipartStreamBuilder;
 use Psr\Http\Client\ClientExceptionInterface;
+
 use Psr\Http\Message\{RequestInterface, ResponseInterface, StreamInterface};
 
 use function defined;
@@ -130,6 +131,8 @@ final class HttpRequest
         ?string $file_path,
     ): self {
         if (null !== $file_path) {
+            Assert::fileExists($file_path);
+            Assert::readable($file_path);
             $this->files[$field] = $file_path;
         }
 
