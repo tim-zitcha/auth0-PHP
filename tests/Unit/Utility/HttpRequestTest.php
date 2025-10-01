@@ -176,6 +176,56 @@ test('withParams() adds multiple parameters to the URL', function(array $paramet
     fn() => new HttpRequest($this->configuration, HttpClient::CONTEXT_GENERIC_CLIENT, 'get', '/' . uniqid())
 ]]);
 
+it('rejects file paths with protocol separators', function(): void {
+    $client = new HttpRequest($this->configuration, HttpClient::CONTEXT_GENERIC_CLIENT, 'post', '/');
+    
+    expect(fn() => $client->addFile('test', 'file:///etc/passwd'))
+        ->toThrow(\InvalidArgumentException::class, 'File paths with protocol separators ("://") are not allowed: "file:///etc/passwd"');
+        
+    expect(fn() => $client->addFile('test', 'http://example.com/file.txt'))
+        ->toThrow(\InvalidArgumentException::class, 'File paths with protocol separators ("://") are not allowed: "http://example.com/file.txt"');
+        
+    expect(fn() => $client->addFile('test', 'php://filter/convert.base64-encode/resource=/etc/passwd'))
+        ->toThrow(\InvalidArgumentException::class, 'File paths with protocol separators ("://") are not allowed: "php://filter/convert.base64-encode/resource=/etc/passwd"');
+});
+
+it('rejects file paths for non-existent or unreadable files', function(): void {
+    $client = new HttpRequest($this->configuration, HttpClient::CONTEXT_GENERIC_CLIENT, 'post', '/');
+    
+    // Non-existent file
+    expect(fn() => $client->addFile('test', '/non/existent/file.txt'))
+        ->toThrow(\InvalidArgumentException::class, 'The file "/non/existent/file.txt" does not exist.');
+    
+    // Create a temp file with no read permissions to test unreadable file
+    $tempFile = sys_get_temp_dir() . '/' . uniqid('auth0_test_');
+    file_put_contents($tempFile, 'test content');
+    chmod($tempFile, 0000); // Remove all permissions
+    
+    try {
+        expect(fn() => $client->addFile('test', $tempFile))
+            ->toThrow(\InvalidArgumentException::class);
+    } finally {
+        chmod($tempFile, 0666); // Restore permissions so we can delete it
+        @unlink($tempFile);
+    }
+});
+
+it('allows valid local file paths', function(): void {
+    $client = new HttpRequest($this->configuration, HttpClient::CONTEXT_GENERIC_CLIENT, 'post', '/');
+    
+    // Create a temporary file that exists and is readable
+    $tempFile = sys_get_temp_dir() . '/' . uniqid('auth0_test_');
+    file_put_contents($tempFile, 'test content');
+    
+    try {
+        // This should not throw an exception
+        $result = $client->addFile('test', $tempFile);
+        expect($result)->toBeInstanceOf(HttpRequest::class);
+    } finally {
+        @unlink($tempFile);
+    }
+});
+
 it('throws a NetworkException when the underlying client raises a ClientExceptionInterface', function(HttpRequest $client): void {
     $client->call();
 })->with(['mocked client' => [
