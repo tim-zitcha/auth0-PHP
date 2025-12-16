@@ -567,7 +567,7 @@ test('decode() throws an exception when `org_id` does not match `organization` c
 test('decode() can be used with access tokens', function (): void {
     $token = (new TokenGenerator())->withHs256([
         'iss' => 'https://' . $this->configuration['domain'] . '/'
-    ]);
+    ], '__test_client_secret__', [], TokenGenerator::TOKEN_ACCESS);
 
     $auth0 = new Auth0($this->configuration + [
         'tokenAlgorithm' => 'HS256',
@@ -584,6 +584,52 @@ test('decode() can be used with access tokens', function (): void {
     );
 
     expect($decoded->getAudience())->toContain('__test_client_id__');
+});
+
+test('decode() rejects ID tokens when validating as access tokens', function (): void {
+    $idToken = (new TokenGenerator())->withHs256([
+        'iss' => 'https://' . $this->configuration['domain'] . '/',
+        'nonce' => '__test_nonce__',
+    ], '__test_client_secret__', [], TokenGenerator::TOKEN_ID);
+
+    $auth0 = new Auth0($this->configuration + [
+        'tokenAlgorithm' => 'HS256',
+    ]);
+
+    $auth0->decode($idToken,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        Token::TYPE_ACCESS_TOKEN,
+    );
+})->throws(InvalidTokenException::class, InvalidTokenException::MSG_ID_TOKEN_USED_AS_ACCESS_TOKEN);
+
+test('decode() respects explicit audience for access tokens', function (): void {
+    $apiAudience = 'https://api.example.com';
+    $token = (new TokenGenerator())->withHs256([
+        'iss' => 'https://' . $this->configuration['domain'] . '/',
+        'aud' => $apiAudience
+    ], '__test_client_secret__', [], TokenGenerator::TOKEN_ACCESS);
+
+    $auth0 = new Auth0($this->configuration + [
+        'tokenAlgorithm' => 'HS256',
+        'audience' => [$apiAudience],
+    ]);
+
+    $decoded = $auth0->decode($token,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        Token::TYPE_ACCESS_TOKEN,
+    );
+
+    expect($decoded->getAudience())->toEqual([$apiAudience]);
 });
 
 test('decode() can be used with logout tokens', function (): void {
