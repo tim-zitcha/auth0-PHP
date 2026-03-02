@@ -175,10 +175,10 @@ final class SelfServiceProfiles extends ManagementEndpoint implements SelfServic
         ])->isString();
 
         return $this->getHttpClient()
-            ->method('PUT')
+            ->method('put')
             ->addPath(['self-service-profiles', $id, 'custom-text', $language, $page])
             ->withOptions($options)
-            ->withBody($body ?? [])
+            ->withBody($body)
             ->call();
     }
 

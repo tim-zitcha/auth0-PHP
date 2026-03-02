@@ -166,12 +166,12 @@ test('createSsoTicket() issues an appropriate request', function(): void {
 
 test('revokeSsoTicket() issues an appropriate request', function(): void {
     $id = uniqid();
-    $prfileId = uniqid();
+    $profileId = uniqid();
 
-    $this->endpoint->revokeSsoTicket($id, $prfileId);
+    $this->endpoint->revokeSsoTicket($id, $profileId);
 
     expect($this->api->getRequestMethod())->toEqual('POST');
-    expect($this->api->getRequestUrl())->toEndWith('/api/v2/self-service-profiles/' . $id . '/sso-ticket/' . $prfileId . '/revoke');
+    expect($this->api->getRequestUrl())->toEndWith('/api/v2/self-service-profiles/' . $id . '/sso-ticket/' . $profileId . '/revoke');
 
     $headers = $this->api->getRequestHeaders();
     expect($headers['Content-Type'][0])->toEqual('application/json');
